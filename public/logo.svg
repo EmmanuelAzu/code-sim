@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CodeSim">
+  <rect width="64" height="64" rx="14" fill="#09090B"/>
+  <!-- Matrix bracket -->
+  <path d="M40 12h8v40h-8" fill="none" stroke="#D946EF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Terminal prompt >_ -->
+  <path d="M14 22l12 10-12 10" fill="none" stroke="#00FF66" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M28 46h12" stroke="#00FF66" stroke-width="5.5" stroke-linecap="round"/>
+</svg>

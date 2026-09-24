@@ -1,103 +1,81 @@
-import Image from "next/image";
+import Link from "next/link";
+import { createClient } from "@/utils/supabase/server";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LiveSolveFeed, type SolveEvent } from "@/components/stats/live-solve-feed";
+import type { Framework } from "@/lib/problems";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const [frameworks, problems, feed, leaders] = await Promise.all([
+    supabase.from("frameworks").select("*").order("name").returns<Framework[]>(),
+    supabase.from("problems").select("framework_id"),
+    supabase
+      .from("solve_feed")
+      .select("id, username, problem_title, framework_id, xp_awarded, created_at")
+      .order("created_at", { ascending: false })
+      .limit(15)
+      .returns<SolveEvent[]>(),
+    supabase.from("leaderboard").select("username, total_xp, problems_solved").order("total_xp", { ascending: false }).limit(10),
+  ]);
+
+  const counts = new Map<string, number>();
+  for (const p of problems.data ?? []) counts.set(p.framework_id, (counts.get(p.framework_id) ?? 0) + 1);
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="mx-auto max-w-7xl px-4 py-16">
+      <section className="max-w-3xl">
+        <p className="font-mono text-sm text-secondary">&gt;_ learn by shipping</p>
+        <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-6xl">
+          Master frameworks <span className="glow text-primary">one challenge</span> at a time.
+        </h1>
+        <p className="mt-4 text-lg text-muted-foreground">
+          Real editor, real tests, instant feedback. Pick a framework and start solving.
+        </p>
+        <Button asChild size="lg" className="mt-8">
+          <Link href="/problems">Browse problems</Link>
+        </Button>
+      </section>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      <div className="mt-16 grid gap-8 lg:grid-cols-[1fr_360px]">
+        <section className="grid content-start gap-4 sm:grid-cols-2">
+          {(frameworks.data ?? []).map((f) => (
+            <Link key={f.id} href={`/problems?framework=${f.id}`}>
+              <Card className="h-full transition-colors hover:border-primary">
+                <CardHeader>
+                  <CardTitle className="font-mono">{f.name}</CardTitle>
+                  <CardDescription>{f.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                  {counts.get(f.id) ?? 0} problems · runs {f.runtime === "browser" ? "in your browser" : "on a remote runner"}
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </section>
+
+        <aside className="flex flex-col gap-6">
+          <LiveSolveFeed initial={feed.data ?? []} />
+          <Card>
+            <CardHeader>
+              <CardTitle>Top XP</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ol className="space-y-2 text-sm">
+                {(leaders.data ?? []).map((l, i) => (
+                  <li key={l.username} className="flex justify-between font-mono">
+                    <span>
+                      <span className="text-muted-foreground">{String(i + 1).padStart(2, "0")}</span> {l.username}
+                    </span>
+                    <span className="text-primary">{l.total_xp} xp</span>
+                  </li>
+                ))}
+                {!leaders.data?.length && <li className="text-muted-foreground">Be the first on the board.</li>}
+              </ol>
+            </CardContent>
+          </Card>
+        </aside>
+      </div>
+    </main>
   );
 }

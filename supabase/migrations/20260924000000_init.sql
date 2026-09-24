@@ -6,7 +6,9 @@ create extension if not exists "uuid-ossp";
 -- Tables
 -- ---------------------------------------------------------------------------
 
-create table profiles (
+-- Named codesim_profiles (not profiles) so CodeSim can share a Supabase project
+-- with ShareWallet, which has its own profiles table.
+create table codesim_profiles (
   id uuid references auth.users on delete cascade primary key,
   username text unique not null,
   avatar_url text,
@@ -77,10 +79,10 @@ create index on solve_feed (created_at desc);
 -- Triggers
 -- ---------------------------------------------------------------------------
 
-create or replace function handle_new_user()
+create or replace function codesim_handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into profiles (id, username, avatar_url)
+  insert into codesim_profiles (id, username, avatar_url)
   values (
     new.id,
     -- suffix keeps usernames unique when two emails share a local part
@@ -92,9 +94,9 @@ begin
 end;
 $$;
 
-create trigger on_auth_user_created
+create trigger codesim_on_auth_user_created
   after insert on auth.users
-  for each row execute function handle_new_user();
+  for each row execute function codesim_handle_new_user();
 
 -- Keeps user_framework_stats and solve_feed in sync with submissions.
 -- XP is only awarded for the first passing submission of a problem.
@@ -127,7 +129,7 @@ begin
   if v_first_pass then
     insert into solve_feed (user_id, username, problem_title, framework_id, difficulty, xp_awarded)
     select new.user_id, p.username, v_problem.title, v_problem.framework_id, v_problem.difficulty, v_xp
-    from profiles p where p.id = new.user_id;
+    from codesim_profiles p where p.id = new.user_id;
   end if;
 
   return new;
@@ -142,15 +144,15 @@ create trigger on_submission_inserted
 -- Row Level Security & grants
 -- ---------------------------------------------------------------------------
 
-alter table profiles enable row level security;
+alter table codesim_profiles enable row level security;
 alter table frameworks enable row level security;
 alter table problems enable row level security;
 alter table user_submissions enable row level security;
 alter table user_framework_stats enable row level security;
 alter table solve_feed enable row level security;
 
-create policy "Profiles are public" on profiles for select using (true);
-create policy "Users update their own profile" on profiles
+create policy "Profiles are public" on codesim_profiles for select using (true);
+create policy "Users update their own profile" on codesim_profiles
   for update using (id = auth.uid()) with check (id = auth.uid());
 
 create policy "Frameworks are public" on frameworks for select using (true);
@@ -185,7 +187,7 @@ create view leaderboard with (security_invoker = true) as
          sum(s.xp)::int as total_xp,
          sum(s.problems_solved)::int as problems_solved
   from user_framework_stats s
-  join profiles p on p.id = s.user_id
+  join codesim_profiles p on p.id = s.user_id
   group by s.user_id, p.username, p.avatar_url;
 
 grant select on leaderboard to anon, authenticated;

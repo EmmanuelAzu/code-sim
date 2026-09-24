@@ -19,6 +19,8 @@ psql "$DATABASE_URL" -f supabase/seed.sql   # frameworks + starter problems
 npm run dev                    # also builds public/sandbox/runtime.js
 ```
 
+Deploying to Vercel + Supabase: see [DEPLOY.md](DEPLOY.md).
+
 In Supabase, enable email magic links and add `<site>/auth/callback` to the
 redirect allow-list.
 
